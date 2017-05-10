@@ -138,7 +138,7 @@ Declare_Any_Class( "Fox",
         // *** Materials: *** Declare new ones as temps when needed; they're just cheap wrappers for some numbers.  1st parameter:  Color (4 floats in RGBA format),
         // 2nd: Ambient light, 3rd: Diffuse reflectivity, 4th: Specular reflectivity, 5th: Smoothness exponent, 6th: Optional texture object, leave off for un-textured.
         this.define_data_members( { position	: vec3(0, 0, 0),
-                                    velocity	: vec3(0, 0, -50),
+                                    velocity	: vec3(0, 0, -20),
                                     z_min		: min,
 									orange		: context.shaders_in_use["Phong_Model" ].material( Color( 1, .423, .212, 1 ), .4, .8, .1, 40 ),
                                     white		: context.shaders_in_use["Phong_Model" ].material( Color( 1, .933, .812, 1 ), .4, .8, .1, 40 ),
