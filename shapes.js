@@ -464,3 +464,17 @@ Declare_Any_Class( "Tail",
         this.indices		= connect_2_sets_of_points(this.positions);
       }
   }, Shape )
+
+Declare_Any_Class( "One_Arrow",
+  { 'populate'()  
+      { var transform = identity();
+        transform = mult( transform, translation(0, 0, .5));
+          transform = mult( transform, scale(.1, .1, 1));
+            Cylindrical_Tube.prototype.insert_transformed_copy_into( this, [ 7, 7 ], transform, 0 );
+          transform = mult( transform, scale(10, 10, 1));
+        transform = mult( transform, translation(0, 0, .75));
+          transform = mult( transform, scale(.25, .25, .25));
+            Closed_Cone.prototype.insert_transformed_copy_into ( this, [ 4, 10 ], transform, 0 );
+        
+      }
+  }, Shape )
