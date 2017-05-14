@@ -143,7 +143,7 @@ Declare_Any_Class( "Fox",
 									orange		: context.shaders_in_use["Phong_Model" ].material( Color( 1, .423, .212, 1 ), .4, .8, .1, 40 ),
                                     white		: context.shaders_in_use["Phong_Model" ].material( Color( 1, .933, .812, 1 ), .4, .8, .1, 40 ),
                                     purple		: context.shaders_in_use["Phong_Model" ].material( Color( .486, .118, .33, 1 ), .4, .8, .1, 40 ),
-									                  black		  : context.shaders_in_use["Phong_Model" ].material( Color( .235, .15, .28, 1 ), .4, .8, .1, 40 )
+									black		  : context.shaders_in_use["Phong_Model" ].material( Color( .235, .15, .28, 1 ), .4, .8, .1, 40 )
                                   } );
                                    
 		var shapes = { 'upper_face'     : smooth_to_flat(new Upper_Face()),
@@ -161,7 +161,8 @@ Declare_Any_Class( "Fox",
 					   'body_part2'		: smooth_to_flat(new Body_Part2()),
 					   'body_part3'		: smooth_to_flat(new Body_Part3()),
 					   'body_part4'		: smooth_to_flat(new Body_Part4()),
-					   'tail'			: smooth_to_flat(new Tail())
+					   'tail'			: smooth_to_flat(new Tail()),
+					   'leg'			: new Cube()
                     };
 		this.submit_shapes( context, shapes );
       },
@@ -181,7 +182,7 @@ Declare_Any_Class( "Fox",
       },
     'add_velocity'( x, y, z)
       { this.velocity[0] += x;
-        this.velocity[1] = y;
+        if (y != 0) this.velocity[1] = y;
         this.velocity[2] += z;
       },
 	'draw'( graphics_state, transform ) {
@@ -192,18 +193,22 @@ Declare_Any_Class( "Fox",
 				this.shapes.body_part1.draw(graphics_state, transform, this.orange);
 					transform = mult(transform, translation(0, 0, -1));
 						this.shapes.body_part2.draw(graphics_state, transform, this.orange);
+						var front_leg_angle = -20 * Math.sin(Math.PI/2 * (this.velocity[1]/7));
+						this.draw_legs( graphics_state, transform, front_leg_angle );
 							transform = mult(transform, translation(0, 0, -1.2));
-								var angle = -10 * this.velocity[1];
-								var dy = angle > 0 ? .4 : .8;
+								var back_leg_angle = -front_leg_angle;
+								this.draw_legs( graphics_state, transform, back_leg_angle );
+								var back_leg_angle = -front_leg_angle;
+								var tail_angle = -10 * this.velocity[1];
+								var dy = tail_angle > 0 ? .4 : .8;
 								transform = mult(transform, translation(0, dy, 0));
-								transform = mult(transform, rotation(angle, 1, 0, 0));
+								transform = mult(transform, rotation(tail_angle, 1, 0, 0));
 								transform = mult(transform, translation(0, -dy, 0));
 									this.shapes.body_part3.draw(graphics_state, transform, this.orange);
 										transform = mult(transform, translation(0, 0, -.6));
 											this.shapes.body_part4.draw(graphics_state, transform, this.orange);
 												transform = mult(transform, translation(0, 0, -1));
-
-																this.shapes.tail.draw(graphics_state, transform, this.white);
+													this.shapes.tail.draw(graphics_state, transform, this.white);
 								
 	  },
 	'draw_head'( graphics_state, transform) {
@@ -272,53 +277,84 @@ Declare_Any_Class( "Fox",
 		transform = mult(transform, translation(-.2, -.2 , -.01));
 		this.shapes.ear_bot.draw(graphics_state, transform, this.orange);
 		this.shapes.ear_top.draw(graphics_state, transform, this.purple);
+	  },
+	'draw_legs'( graphics_state, transform, angle ) {
+		var original = transform;
+		var rad = radians(angle);
+		var angle_2 = (angle+30)*.5;
+		var rad_2 = radians(angle_2);
+		transform = mult(transform, translation(.4, -.3 - .3*Math.cos(rad), .4-.4*Math.sin(rad)));
+			transform = mult(transform, rotation(angle, 1, 0, 0));
+				transform = mult(transform, scale(.12, .3, .12));
+					this.shapes.leg.draw(graphics_state, transform, this.orange);
+				transform = mult(transform, scale(1/.12, 1/.3, 1/.12));
+				transform = mult(transform, translation(0, -.3-.3*Math.cos(rad_2) + .12*Math.sin(rad_2), -.3*Math.sin(rad_2) + .12*(1-Math.cos(rad_2))));
+					transform = mult(transform, rotation(angle_2, 1, 0, 0));
+						transform = mult(transform, scale(.119, .3, .119));
+							this.shapes.leg.draw(graphics_state, transform, this.black);
+		transform = original;
+		transform = mult(transform, translation(-.4, -.3 - .3*Math.cos(rad), -.4*Math.sin(rad)));
+			transform = mult(transform, rotation(angle, 1, 0, 0));
+				transform = mult(transform, scale(.12, .3, .12));
+					this.shapes.leg.draw(graphics_state, transform, this.orange);
+				transform = mult(transform, scale(1/.12, 1/.3, 1/.12));
+				transform = mult(transform, translation(0, -.3-.3*Math.cos(rad_2) + .12*Math.sin(rad_2), -.3*Math.sin(rad_2) + .12*(1-Math.cos(rad_2))));
+					transform = mult(transform, rotation(angle_2, 1, 0, 0));
+						transform = mult(transform, scale(.119, .3, .119));
+							this.shapes.leg.draw(graphics_state, transform, this.black);
 	  }
-		
-  }, Scene_Component );
+}, Scene_Component );
   
 
 Declare_Any_Class( "Flapping_Fox",
   { 'construct'( context )
-      { // context.globals.graphics_state.set( translation(0, 0, -25), perspective(45, context.width/context.height, 0.1, 1000), 0);
-        var l = 100;
+      { var l = 100;
         // *** Materials: *** Declare new ones as temps when needed; they're just cheap wrappers for some numbers.  1st parameter:  Color (4 floats in RGBA format),
         // 2nd: Ambient light, 3rd: Diffuse reflectivity, 4th: Specular reflectivity, 5th: Smoothness exponent, 6th: Optional texture object, leave off for un-textured.
         this.define_data_members( { graphics_state: context.globals.graphics_state,
-                                    ratio        : context.width/context.height,
-                                    tunnel_wall  : context.shaders_in_use["Phong_Model" ].material( Color( .09, .125, .3, 1 ), 1, 1, .4, 1 ),   // Smaller exponent means 
-                                    tunnel_line  : context.shaders_in_use["Phong_Model" ].material( Color( .17, .17, .17, 1 ), 1, 1, .4, 1 ),
-                                    tunnel_light : context.shaders_in_use["Phong_Model" ].material( Color( .8, .8, .8, 1 ), .4, .8, .1, 40 ),
-                                    door         : context.shaders_in_use["Phong_Model" ].material( Color( .35, .56, .91, 1 ), .1, .8, .1, 40 ),
-                                    fox_color    : context.shaders_in_use["Phong_Model" ].material( Color( .8, .8, .8, 1 ), .4, .8, .1, 40 ),
-                                    prevdoor     : context.shaders_in_use["Phong_Model" ].material( Color( 0,0, 0,.1 ), 1, 0, 0, 40 ),     // a bigger shiny spot.
-                                  
-                                    tunnel_r     : 7,
-                                    tunnel_l     : l,
-                                    tunnel_line_r: 1,
-                                    tunnel_light_r:.5,
-                                    tunnel_light_d:15,
-                                    door_thick   : 1,
-                                    hole_r       : 2,
-                                    hole_pos_max : 4,
-                                    hole_x       : 0,
-                                    hole_y       : 0,
-                                    hole_passing_r : 1.5,
+                                    ratio			: context.width/context.height,
+                                    tunnel_wall		: context.shaders_in_use["Phong_Model"].material( Color(  .09, .125,   .3, 1 ), 1, 1, .4, 1 ),   // Smaller exponent means 
+                                    tunnel_line		: context.shaders_in_use["Phong_Model"].material( Color(  .17,  .17,  .17, 1 ), 1, 1, .4, 1 ),
+                                    tunnel_light	: context.shaders_in_use["Phong_Model"].material( Color(   .8,   .8,   .8, 1 ), .4, .8, .1, 40 ),
+                                    door			: context.shaders_in_use["Phong_Model"].material( Color(  .35,  .56,  .91, 1 ), 1, 0, 0, 40 ),
+                                    fox_color		: context.shaders_in_use["Phong_Model"].material( Color(   .8,   .8,   .8, 1 ), .4, .8, .1, 40 ),
+                                    prevdoor		: context.shaders_in_use["Phong_Model"].material( Color(    0,    0,    0, .1 ), 1, 0, 0, 40 ),     // a bigger shiny spot.
+									text_material	: context.shaders_in_use["Phong_Model"].material( Color(    0,    0,    0, 1 ), 1, 0, 0, 40, context.textures_in_use["text.png"] ),
+									broken_glass	: context.shaders_in_use["Phong_Model"].material( Color(  0,0,0, .1), 1, 0, 0, 40, context.textures_in_use["broken_glass.png"] ),
+                                    hole_circle		: context.shaders_in_use["Phong_Model"].material( Color(  .09, .125,   .3, 1 ), 1, 1, .4, 1 ),
+									door			: context.shaders_in_use["Phong_Model"].material( Color(    0,    0,    0, 1 ), 1, 0, 0, 40, context.textures_in_use["door.jpg"] ),
 
-                                    fox      	 : new Fox(context,  -l / 2),
+									tunnel_r		: 7,
+                                    tunnel_l		: l,
+                                    tunnel_line_r	: 1,
+                                    tunnel_light_r	: .5,
+                                    tunnel_light_d	: 15,
+                                    door_thick		: 1,
+                                    hole_r			: 2,
+                                    hole_pos_max	: 4,
+                                    hole_x			: 0,
+                                    hole_y			: 0,
+                                    hole_passing_r	: 1.5,
+
+                                    fox				: new Fox(context,  -l / 2),
                                     
-                                    first_time   : true,
-                                    prev_t       : 0,
-                                    running      : false,
-                                    hole_updated : false,
-                                    crash_wall   : 6,
-                                    crash_line   : 2,
-                                    crashed      : false
+                                    first_time		: true,
+                                    prev_t			: 0,
+                                    running			: false,
+                                    hole_updated	: false,
+                                    crash_wall		: 6,
+                                    crash_line		: 2,
+                                    crashed			: false
                                   } );
-        var shapes = { 'tube'           : new Cylindrical_Tube(10,1000),
-                       'ball'			      : new Grid_Sphere(30, 30),
+        var shapes = { 'tube'			: new Cylindrical_Tube(10,1000),
+                       'ball'			: new Grid_Sphere(30, 30),
                        'capped_cylinder': new Capped_Cylinder(10,1000),
-                       'donut'          : new Torus_rR_Specified( 100, 100, this.tunnel_r, this.tunnel_light_r ),
-                       'hole'           : new Torus_rR_Specified( 100, 100, this.hole_r, .1 )
+                       'donut'			: new Torus_rR_Specified( 100, 100, this.tunnel_r, this.tunnel_light_r ),
+					   'hole'			: new Regular_2D_Polygon(1, 100),
+					   'hole_indicator1': new Torus_rR_Specified( 100, 100, this.hole_r, .1 ),
+					   'hole_indicator2': new One_Arrow(),
+					   'haha':new Text_Line(5),
+					   'square':new Square()
                     };
         this.submit_shapes( context, shapes );
       },
@@ -356,20 +392,24 @@ Declare_Any_Class( "Flapping_Fox",
         }
         else this.hole_updated = false;
         if (t == 0 || this.running) graphics_state.camera_transform = lookAt(vec3(pos[0], 5, pos[2]+15), pos, vec3(0, 1, 0));
-		//if (t == 0 || this.running) graphics_state.camera_transform = lookAt(vec3(-4.5, 5, 4.2), vec3(0, 0, 1), vec3(0, 1, 0));
+		//if (t == 0 || this.running) graphics_state.camera_transform = lookAt(vec3(-5, pos[1], 0), pos, vec3(0, 1, 0));
 		// *** Lights: *** Values of vector or point lights over time.  Two different lights *per shape* supported; more requires changing a number in the vertex shader.
         graphics_state.lights = [ new Light( vec4( 0, 5, pos[2] + 5, 1 ), Color( 0, 0, 0, 1 ), 10000 ),      // Arguments to construct a Light(): Light source position or 
                                   new Light( vec4( 0, -5, pos[2], 1 ), Color( 0, 0, 0, 1 ), 10000 )
 								    ];    // vector (homogeneous coordinates), color, and size.  
         
         this.tunnel(graphics_state);
-        this.next_door(graphics_state);
+        this.next_door(graphics_state, t);
         
         if (this.running && !this.crashed) {
 			this.fox.advance( graphics_state.animation_delta_time );
 			//console.log(graphics_state.animation_delta_time);
 		}
 		var transform = identity();
+
+    ////////////////////// this.shapes.haha.set_string( "haha" );
+		/////this.shapes.haha.draw( this.graphics_state, transform, this.text_material );
+
 		transform = mult(transform, translation(pos));
         	transform = mult(transform, rotation(180, 0, 1, 0));
 				transform = mult(transform, scale(.5, .5, .5));
@@ -393,20 +433,32 @@ Declare_Any_Class( "Flapping_Fox",
         this.shapes.tube.draw(graphics_state, mult(transform, translation(this.tunnel_r, 0, 0)), this.tunnel_line);
         this.shapes.tube.draw(graphics_state, mult(transform, translation(-this.tunnel_r, 0, 0)), this.tunnel_line);
         this.shapes.tube.draw(graphics_state, scale(this.tunnel_r, this.tunnel_r, this.tunnel_l), this.tunnel_wall);
-        var position = 20;
+        var position = 20; 
         while (position > -this.tunnel_l) {
           this.shapes.donut.draw(graphics_state, translation(0, 0, position), this.tunnel_light);
           position -= this.tunnel_light_d;
         }
       },
-    'next_door'( graphics_state )
+    'next_door'( graphics_state, t )
       { var transform = identity();
         transform = mult(transform, translation(0, 0, -this.tunnel_l / 2));
-          transform = mult(transform, scale(this.tunnel_r, this.tunnel_r, this.door_thick));
-            this.shapes.capped_cylinder.draw(graphics_state, transform, this.door);
-          transform = mult(transform, scale(1/this.tunnel_r, 1/this.tunnel_r, 1/this.door_thick));
-          transform = mult(transform, translation(this.hole_x, this.hole_y, 1));
-            this.shapes.hole.draw(graphics_state, transform, this.tunnel_light);
+    		transform = mult(transform, scale(this.tunnel_r, this.tunnel_r, this.door_thick));
+        		this.shapes.capped_cylinder.draw(graphics_state, transform, this.door);
+    		transform = mult(transform, scale(1/this.tunnel_r, 1/this.tunnel_r, 1/this.door_thick));
+        transform = mult(transform, translation(this.hole_x, this.hole_y, .5*this.door_thick+.05));
+			transform = mult(transform, scale(this.hole_r, this.hole_r, this.door_thick));
+        		this.shapes.hole.draw(graphics_state, transform, this.broken_glass);
+			transform = mult(transform, scale(1/this.hole_r, 1/this.hole_r, 1/this.door_thick));
+			this.shapes.hole_indicator1.draw(graphics_state, transform, this.tunnel_wall);
+			var tmp = transform;
+			var n = 6;
+			for (var i = 0; i < 6; i++) {
+				transform = mult(tmp, rotation(60 * i, 0, 0, 1));
+					transform = mult(transform, rotation(90, 1, 0, 0));
+						transform = mult(transform, translation(0, 0, -this.hole_r - 1.25 - .25 * Math.cos(2 * Math.PI * t/1)));
+							transform = mult(transform, scale(1, 1, .5));
+								this.shapes.hole_indicator2.draw(graphics_state, transform, this.tunnel_wall);
+			}
       },
     'prev_door'( graphics_state )
       {
